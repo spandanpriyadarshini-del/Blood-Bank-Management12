@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blood Bank Management System</title>
+<style>
+:root{--bg:#faf7f6;--card:#fff;--ink:#241a1a;--mute:#7a6b6b;--line:#eadfdd;--red:#b3122b;--redl:#fdecee;--ok:#1d7a4a;--warn:#b7791f}
+@media(prefers-color-scheme:dark){:root{--bg:#171212;--card:#221a1a;--ink:#f3eaea;--mute:#a89898;--line:#3a2d2d;--red:#ef4a63;--redl:#3a1b21;--ok:#4cc58a;--warn:#e6b04c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,Segoe UI,sans-serif}
+header{padding:18px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);background:var(--card)}
+.drop{width:28px;height:28px;background:var(--red);border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+h1{font-size:19px;margin:0}h2{font-size:17px;margin:0 0 10px}h3{font-size:15px;margin:18px 0 6px}
+nav{display:flex;gap:4px;padding:10px 24px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;color:var(--mute);padding:8px 14px;border-radius:8px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--redl);color:var(--red);font-weight:600}
+main{max-width:1000px;margin:0 auto;padding:22px 24px 60px}section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat b{display:block;font-size:28px;color:var(--red)}.stat span{color:var(--mute);font-size:13px}
+form,.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:3px}
+input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.btn{padding:8px 14px;border:0;border-radius:8px;background:var(--red);color:#fff;font:inherit;cursor:pointer}
+.btn.g{background:var(--redl);color:var(--red)}.btn.s{padding:4px 10px;font-size:13px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--mute);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+td,th{padding:9px 10px;border-bottom:1px solid var(--line)}
+.tag{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:var(--redl);color:var(--red)}
+.AVAILABLE,.PROCESSED{color:var(--ok)}.PENDING{color:var(--warn)}
+.bar{display:flex;align-items:center;gap:10px;margin:5px 0}.bar i{display:block;height:14px;background:var(--red);border-radius:4px;min-width:2px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:10px;background:var(--ink);color:var(--bg);display:none;max-width:90%}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:12.5px;margin:6px 0}
+.arch{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.arch div{flex:1;min-width:150px;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;background:var(--bg)}
+.arch div small{display:block;color:var(--mute)}.arr{flex:0!important;min-width:0!important;border:0!important;background:none!important;color:var(--red)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}svg{max-width:100%;height:auto}svg text{fill:var(--ink);font:12px system-ui}svg rect{fill:var(--card);stroke:var(--red)}svg line,svg path{stroke:var(--mute);fill:none}
+.click{cursor:pointer;transition:.15s}.click:hover{border-color:var(--red);transform:translateY(-2px)}tr.click:hover td{background:var(--redl)}
+#auth{display:none;max-width:400px;margin:50px auto;padding:0 16px}body:not(.in) #auth{display:block}body:not(.in) nav,body:not(.in) main,body:not(.in) #who{display:none}
+#auth form{flex-direction:column;align-items:stretch}#who{margin-left:auto;display:flex;gap:10px;align-items:center}.tabs{display:flex;gap:6px;margin-bottom:12px}
+</style></head><body>
+<header><div class="drop"></div><div><h1>Blood Bank Management System</h1><small style="color:var(--mute)">Python · SQLite · HTML/CSS/JS</small></div><div id="who"><span id="un"></span><button class="btn g s" id="lo">Log out</button></div></header>
+<div id="auth"><div class="card"><div class="tabs"><button class="btn" id="tl">Log in</button><button class="btn g" id="ts">Sign up</button></div>
+<form id="fa"><label id="ln" style="display:none">Full name<input name="name"></label><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required minlength="6" autocomplete="current-password"></label><button class="btn" id="sb">Log in</button></form>
+<p style="color:var(--mute);font-size:13px;margin-bottom:0">Passwords are stored hashed (PBKDF2) in the users table.</p></div></div>
+<nav id="nav"></nav>
+<main>
+<section id="dash"><div class="grid" id="stats"></div><div class="two" style="margin-top:16px"><div class="card"><h2>Available stock by group</h2><div id="bars"></div></div><div class="card"><h2>Requests by hospital <small style="color:var(--mute)">(JOIN + GROUP BY)</small></h2><div class="tw"><table id="hosp"></table></div></div></div></section>
+
+<section id="stock"><div class="card"><h2>Add blood unit <small style="color:var(--mute)">(Create)</small></h2>
+<form id="fu"><label>Unit ID<input name="unit_id" required></label><label>Group<select name="blood_group" class="gs"></select></label><label>Donor<input name="donor" required></label><label>Expiry<input type="date" name="expiry" required></label><button class="btn">Add</button></form></div>
+<div class="card"><div class="row" style="margin-bottom:10px"><h2 style="margin:0 auto 0 0">Blood units <small style="color:var(--mute)">(Read)</small></h2><label>Group<select id="fg"><option value="">All</option></select></label><label>Status<select id="fs"><option value="">All</option><option>AVAILABLE</option><option>ISSUED</option><option>EXPIRED</option></select></label><label>Donor / ID<input id="fq" placeholder="search"></label></div><div class="tw"><table id="tu"></table></div></div></section>
+
+<section id="req"><div class="card"><h2>Register hospital request</h2>
+<form id="fr"><label>Request ID<input name="request_id" required></label><label>Hospital<input name="hospital" required></label><label>Group<select name="blood_group" class="gs"></select></label><label>Units<input type="number" min="1" name="quantity" value="1" style="width:80px"></label><button class="btn">Register</button></form></div>
+<div class="card"><div class="row" style="margin-bottom:10px"><h2 style="margin:0 auto 0 0">Requests</h2><label>Status<select id="rs"><option value="">All</option><option>PENDING</option><option>PROCESSED</option><option>CANCELLED</option></select></label><label>Hospital<input id="rh" placeholder="search"></label></div><div class="tw"><table id="tr"></table></div><p style="color:var(--mute);font-size:13px">Processing issues the earliest-expiring matching units first. Exact blood-group match only — not a clinical compatibility check.</p></div></section>
+
+<section id="alerts"><div class="card"><h2>Expiry alerts</h2><div class="row"><label>Today's date<input type="date" id="td"></label><button class="btn" id="ce">Check</button><button class="btn g" id="me">Mark all as EXPIRED</button></div><div class="tw"><table id="te"></table></div></div>
+<div class="card"><h2>Shortage alerts</h2><div class="row"><label>Alert when below<input type="number" id="lim" value="2" min="0" style="width:90px"></label></div><div id="sh" style="margin-top:10px"></div></div></section>
+
+<section id="hist"><div class="card"><h2>Stock movement history</h2><div class="tw"><table id="th"></table></div></div></section>
+
+<section id="report">
+<div class="card"><h2>Abstract</h2><p>The Blood Bank Management System replaces paper registers with a small web application backed by a relational database. It records donated blood units, registers hospital requests, issues stock using the earliest-expiry-first rule, and raises expiry and shortage alerts. The earlier console project stored data in text files; this version moves the data into SQLite so that keys and constraints keep it consistent.</p></div>
+<div class="card"><h2>Introduction</h2><div class="two"><div><h3>UI</h3><p>Single-page HTML, CSS and vanilla JavaScript with tabs, forms and tables.</p></div><div><h3>Database</h3><p>SQLite with 6 related tables.</p></div><div><h3>Language</h3><p>Python 3 (standard library) for the server; JavaScript in the browser; SQL for data.</p></div></div></div>
+<div class="card"><h2>Objective</h2><ul><li>Keep an accurate, searchable record of every blood unit and its donor.</li><li>Reduce wastage by issuing units that expire first.</li><li>Track hospital requests from PENDING to PROCESSED or CANCELLED.</li><li>Warn about expiring stock and groups running low.</li><li>Demonstrate joins, constraints, keys and CRUD in a real project.</li></ul></div>
+
+<div class="card"><h2>Project information</h2>
+<h3>ER diagram</h3><div class="tw"><svg viewBox="0 0 640 250" width="640"><rect x="10" y="20" width="150" height="70" rx="6"/><text x="22" y="42" font-weight="700">donors</text><text x="22" y="60">🔑 donor_id</text><text x="22" y="76">name (UNIQUE)</text>
+<rect x="245" y="20" width="170" height="110" rx="6"/><text x="257" y="42" font-weight="700">blood_units</text><text x="257" y="60">🔑 unit_id</text><text x="257" y="76">blood_group, expiry, status</text><text x="257" y="92">FK donor_id</text><text x="257" y="108">FK request_id</text>
+<rect x="480" y="20" width="150" height="110" rx="6"/><text x="492" y="42" font-weight="700">requests</text><text x="492" y="60">🔑 request_id</text><text x="492" y="76">blood_group, quantity</text><text x="492" y="92">status</text><text x="492" y="108">FK hospital_id</text>
+<rect x="480" y="180" width="150" height="55" rx="6"/><text x="492" y="202" font-weight="700">hospitals</text><text x="492" y="220">🔑 hospital_id, name</text>
+<rect x="245" y="180" width="170" height="55" rx="6"/><text x="257" y="202" font-weight="700">history</text><text x="257" y="220">🔑 id, at, message</text>
+<line x1="160" y1="55" x2="245" y2="55"/><text x="165" y="48">1</text><text x="228" y="48">N</text><line x1="415" y1="55" x2="480" y2="55"/><text x="420" y="48">N</text><text x="466" y="48">1</text><line x1="555" y1="130" x2="555" y2="180"/><text x="560" y="150">1</text><text x="560" y="174">N</text></svg></div>
+<h3>DFD (data flow)</h3><div class="arch"><div>Staff / Hospital</div><span class="arr">→</span><div>Web form<small>validate input</small></div><span class="arr">→</span><div>Python API<small>business rules</small></div><span class="arr">⇄</span><div>SQLite<small>stores &amp; enforces</small></div><span class="arr">→</span><div>Tables, alerts, analytics</div></div>
+<h3>Architecture</h3><div class="arch"><div>Presentation<small>HTML · CSS · JS</small></div><span class="arr">⇄ JSON</span><div>Application<small>server.py · http.server</small></div><span class="arr">⇄ SQL</span><div>Data<small>bloodbank.db (SQLite)</small></div></div></div>
+
+<div class="card"><h2>Concepts used</h2><div class="two"><div><h3>Keys</h3><p>PRIMARY KEY uniquely identifies each row; FOREIGN KEYs link tables.</p><pre>unit_id TEXT PRIMARY KEY,
+donor_id INTEGER REFERENCES donors(donor_id)</pre><h3>Constraints</h3><p>NOT NULL, UNIQUE, DEFAULT and CHECK keep bad data out.</p><pre>quantity INTEGER CHECK(quantity &gt; 0),
+blood_group TEXT CHECK(blood_group IN ('A+',...)),
+status TEXT DEFAULT 'AVAILABLE'</pre></div>
+<div><h3>Joins</h3><p>Combine rows from related tables.</p><pre>SELECT u.unit_id, d.name, u.expiry
+FROM blood_units u
+JOIN donors d ON d.donor_id = u.donor_id;</pre><h3>CRUD</h3><pre>INSERT INTO blood_units ...   -- Create
+SELECT ... FROM blood_units   -- Read
+UPDATE blood_units SET ...    -- Update
+DELETE FROM blood_units ...   -- Delete</pre></div></div></div>
+
+<div class="card"><h2>System requirements</h2><div class="two"><div><h3>Software</h3><ul><li>Python 3.8+ (no extra packages)</li><li>SQLite (built into Python)</li><li>Any modern browser</li></ul></div><div><h3>Hardware</h3><ul><li>OS: Windows / Linux / macOS</li><li>CPU: dual-core or better</li><li>RAM: 2 GB minimum</li><li>HDD: under 100 MB</li></ul></div></div></div>
+</section>
+</main><div id="toast"></div>
+<script>
+const G=["A+","A-","B+","B-","AB+","AB-","O+","O-"],$=s=>document.querySelector(s),today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tabs=[["dash","Dashboard"],["stock","Blood Stock"],["req","Requests"],["alerts","Alerts"],["hist","History"],["report","Project Report"]];
+$("#nav").innerHTML=tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join("");
+function go(t){document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==t));document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t==t));if(t!="report")load[t]&&load[t]()}
+$("#nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
+function toast(m,bad){const t=$("#toast");t.textContent=m;t.style.display="block";t.style.background=bad?"var(--red)":"";t.style.color=bad?"#fff":"";clearTimeout(t.h);t.h=setTimeout(()=>t.style.display="none",4000)}
+async function api(m,u,b){const r=await fetch("/api"+u,{method:m,headers:{"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});const d=await r.json();if(r.status==401){document.body.classList.remove("in");throw d}if(!r.ok){toast(d.error,1);throw d}if(d.ok)toast(d.ok);return d}
+const tbl=(el,h,rows)=>$(el).innerHTML="<tr>"+h.map(x=>`<th>${x}</th>`).join("")+"</tr>"+(rows.join("")||`<tr><td colspan="${h.length}" style="color:var(--mute)">Nothing here yet.</td></tr>`);
+document.querySelectorAll(".gs").forEach(s=>s.innerHTML=G.map(g=>`<option>${g}</option>`).join(""));$("#fg").innerHTML+=G.map(g=>`<option>${g}</option>`).join("");
+let units=[],reqs=[];
+function drawReqs(){const s=$("#rs").value,t=$("#rh").value.toLowerCase();
+ tbl("#tr",["ID","Hospital","Group","Units","Status",""],reqs.filter(x=>(!s||x.status==s)&&(!t||x.hospital.toLowerCase().includes(t))).map(x=>`<tr><td>${esc(x.request_id)}</td><td>${esc(x.hospital)}</td><td><span class="tag">${x.blood_group}</span></td><td>${x.quantity}</td><td class="${x.status}">${x.status}</td><td>${x.status=="PENDING"?`<button class="btn s" onclick="proc('${esc(x.request_id)}')">Process</button> <button class="btn g s" onclick="canc('${esc(x.request_id)}')">Cancel</button>`:""}</td></tr>`))}
+$("#rs").onchange=$("#rh").oninput=drawReqs;
+function jump(tab,st){if(tab=="stock"){$("#fg").value="";$("#fq").value="";$("#fs").value=st}else{$("#rh").value="";$("#rs").value=st}go(tab)}
+function jumpG(g){$("#fg").value=g;$("#fq").value="";$("#fs").value="AVAILABLE";go("stock")}
+function jumpH(n){$("#rh").value=n;$("#rs").value="";go("req")}
+function drawUnits(){const g=$("#fg").value,t=$("#fq").value.toLowerCase(),st=$("#fs").value;
+ tbl("#tu",["ID","Group","Donor","Expiry","Status",""],units.filter(u=>(!g||u.blood_group==g)&&(!st||u.status==st)&&(!t||(u.donor+u.unit_id).toLowerCase().includes(t))).map(u=>`<tr><td>${esc(u.unit_id)}</td><td><span class="tag">${u.blood_group}</span></td><td>${esc(u.donor)}</td><td>${u.expiry}</td><td class="${u.status}">${u.status}</td><td>${u.status=="AVAILABLE"?`<button class="btn g s" onclick="edit('${esc(u.unit_id)}')">Edit</button> `:""}${u.status!="ISSUED"?`<button class="btn g s" onclick="del('${esc(u.unit_id)}')">Delete</button>`:""}</td></tr>`))}
+$("#fg").onchange=$("#fs").onchange=$("#fq").oninput=drawUnits;
+async function edit(id){const d=prompt("New donor name (blank = keep):"),e=prompt("New expiry YYYY-MM-DD (blank = keep):");if(!d&&!e)return;await api("PUT","/units/"+id,{donor:d||"",expiry:e||""});load.stock()}
+async function del(id){if(confirm("Delete unit "+id+"?")){await api("DELETE","/units/"+id);load.stock()}}
+async function proc(id){const t=prompt("Today's date (YYYY-MM-DD):",today());if(t){await api("POST",`/requests/${id}/process`,{today:t});load.req()}}
+async function canc(id){if(confirm("Cancel request "+id+"?")){await api("POST",`/requests/${id}/cancel`);load.req()}}
+const load={
+ async dash(){const a=await api("GET","/analytics"),s=await api("GET","/shortage"),n=(l,k)=>(l.find(x=>x.status==k)||{n:0}).n;
+  $("#stats").innerHTML=[["Available units",n(a.units,"AVAILABLE"),"stock","AVAILABLE"],["Issued",n(a.units,"ISSUED"),"stock","ISSUED"],["Expired",n(a.units,"EXPIRED"),"stock","EXPIRED"],["Pending requests",n(a.requests,"PENDING"),"req","PENDING"],["Processed",n(a.requests,"PROCESSED"),"req","PROCESSED"],["Cancelled",n(a.requests,"CANCELLED"),"req","CANCELLED"]].map(x=>`<div class="card stat click" style="margin:0" onclick="jump('${x[2]}','${x[3]}')" title="Click to view"><b>${x[1]}</b><span>${x[0]}</span></div>`).join("");
+  const m=Math.max(1,...s.map(x=>x.available));$("#bars").innerHTML=s.map(x=>`<div class="bar click" onclick="jumpG('${x.blood_group}')" title="View ${x.blood_group} units"><span style="width:32px">${x.blood_group}</span><i style="width:${x.available/m*70}%"></i><b>${x.available}</b></div>`).join("");
+  tbl("#hosp",["Hospital","Requests","Units"],a.hospitals.map(h=>`<tr class="click" onclick="jumpH('${esc(h.name).replace(/'/g,"\\'")}')"><td>${esc(h.name)}</td><td>${h.requests}</td><td>${h.units}</td></tr>`))},
+ async stock(){units=await api("GET","/units");drawUnits()},
+ async req(){reqs=await api("GET","/requests");drawReqs()},
+ async alerts(){$("#td").value=$("#td").value||today();$("#te").innerHTML="";shortage()},
+ async hist(){const h=await api("GET","/history");tbl("#th",["When (UTC)","Event"],h.map(x=>`<tr><td>${x.at}</td><td>${esc(x.message)}</td></tr>`))}};
+async function shortage(){const s=await api("GET","/shortage"),l=+$("#lim").value,low=s.filter(x=>x.available<l);$("#sh").innerHTML=low.length?low.map(x=>`<span class="tag" style="margin:2px">${x.blood_group}: ${x.available}</span>`).join(" "):`<span class="AVAILABLE">No shortages — every group has at least ${l}.</span>`}
+$("#lim").oninput=shortage;
+$("#ce").onclick=async()=>{const r=await api("GET","/expiry?today="+$("#td").value);tbl("#te",["Unit","Group","Expiry"],r.map(u=>`<tr><td>${esc(u.unit_id)}</td><td>${u.blood_group}</td><td>${u.expiry}</td></tr>`));if(!r.length)toast("No expired or due units")};
+$("#me").onclick=async()=>{await api("POST","/expiry",{today:$("#td").value});$("#ce").click();shortage()};
+for(const [f,u,k] of [["#fu","/units","stock"],["#fr","/requests","req"]])$(f).onsubmit=async e=>{e.preventDefault();await api("POST",u,Object.fromEntries(new FormData(e.target)));e.target.reset();load[k]()};
+let signup=false;
+function mode(s){signup=s;$("#ln").style.display=s?"flex":"none";$("#ln input").required=s;$("#sb").textContent=s?"Create account":"Log in";$("#tl").className="btn"+(s?" g":"");$("#ts").className="btn"+(s?"":" g")}
+$("#tl").onclick=()=>mode(false);$("#ts").onclick=()=>mode(true);
+$("#fa").onsubmit=async e=>{e.preventDefault();const d=await api("POST",signup?"/signup":"/login",Object.fromEntries(new FormData(e.target)));e.target.reset();enter(d.name)};
+$("#lo").onclick=async()=>{await api("POST","/logout");document.body.classList.remove("in");mode(false)};
+function enter(n){$("#un").textContent="👤 "+n;document.body.classList.add("in");go("dash")}
+fetch("/api/me").then(r=>r.ok?r.json():null).then(d=>d&&enter(d.name));
+</script></body></html>
